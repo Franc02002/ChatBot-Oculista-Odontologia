@@ -1,0 +1,49 @@
+ *INICIA EL BOT*
+
+Hola, soy el A.V.I el asistente de (empresa), en que puedo ayudarte?
+
+*LISTA DE OPCIONES*
+
+1-Solicitar turno con Odoltologo
+2-Solicitar turno con Oculista
+3-Dar de baja un turno
+
+Indique con un numero la opcion que desea.
+
+    *OPCION 1*
+    Ha seleccionado pedir un turno con el Odoltologo, Indique dia y hora en la que necesita el turno
+
+        *COLOCA DIA Y HORA*
+        Perfecto,estos es el turnos disponibles en ese horario
+        1-(hora1)(Odoltologo1) *EXISTE TURNO DISPONIBLE Y SE SACA
+            *EN CASO DE NO HABER TURNOS EN ESE HORARIO ESPECIFICO*
+            Lo sentimos, no hay turnos disponibles para (hora)hs, a continuacion vera todos los turnos del (dia) disponibles
+            1-(hora1)(Odoltologo1)
+            2-(hora4)(Odoltologo1)
+            3-(hora5)(Odoltologo1)
+            4-(hora6)(Odoltologo1)
+            *ERROR Y VUELTA A ESTE BUCLE EN CASO DE ELEGIR UNA OPCION INCORRECTA, EN CASO DE QUERER SALIR Y VOLVER A INDICAR DIA SE SALE DEL BUCLE*
+        *EN CASO DE ELEGIR UNA OPCION INCORRECTA SE REPITE EL BUCLE O EN CASO DE SALIR SE VUELVE A INDICAR QUE DIA Y HORA QUIERE TURNO*
+
+    *EN CASO DE HABER ELEGIDO LA HORA Y DIA DE MANERA CORRECTA CONCLUIRA CON UN MENSAJE DE CONFIRMACION Y SE AVISA QUE CON SU DNI SE DEBE PRESENTAR, EN OTRO CASO SE SALDRA AL MENU PRINCIPAL SI ASI LO DESEA*
+
+    *OPCION 2*
+    Ha seleccionado pedir un turno con un Oculista, Indique dia y hora en la que necesita el turno   
+        (Se reutilizan los metodos implementados para los odontologos)
+
+    *OPCION 3*
+    Ha seleccionado dar de baja un turno, por favor indique el codigo asociado a su turno
+
+        *CODIGO VALIDO*
+            *ES CANCELADA LA OPERACION* Su turno ha sido cancelado con exito, lo esperamos en otra ocasion.
+        *CODIGO INVALIDO*
+            El codigo ingresado no corresponde a un turno valido, por favor vuelva a intentarlo.
+
+
+   
+
+
+*SE PODRIA IMPLEMENTAR*
+METODO PARA CANCELAR LA EJECUCION LUEGO DE X TIEMPO
+INCORPORAR WHATSAPP COMO VIA DE COMUNICACION
+ALGUN FRAMEWORK DE OPTIMIZACION
