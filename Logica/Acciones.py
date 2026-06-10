@@ -21,7 +21,7 @@ def sacarTurno(opcion,planilla):
             dia =dia.capitalize()
             hora= input("Indique la hora en la que necesita el turno, ej: 15:00" "\n")
             if verificaHora(hora) and dia in {"Lunes","Martes","Miercoles","Jueves","Viernes"} :         
-                seguir= buscarTurno(dia,f"{hora}:00", planilla)           
+                 seguir= buscarTurno(dia,hora, planilla)           
             else:
                 print("Fecha u Hora ingresada incorrecta o con formato incorrecto, por favor vuelva a ingresarla" "\n")       
 
@@ -37,40 +37,45 @@ def verificaHora(hora_texto):
 
 def buscarTurno(dia,hora,planilla):
     #Busco dentro de los turnos disponibles si se encuentra disponible el pedido y lo confirma, en caso de no estarlo ofrece variantes en el mismo dia
-    estadoTurno = planilla.at[hora,dia];
-    if pd.isna(estadoTurno) or estadoTurno== "":
-        dniAsociado=input("El dia y hora elegido estan disponibles, por favor ingrese su DNI para confirmar el turno u escriba 'salir' para volver" "\n") #PULIR PARA CUANDO 1 PERSONA TENGA MAS DE UN TURNO EN LA MISMA SEMANA
+    
+    filtro1= planilla["Dia"] == dia
+    filtro2= planilla["Hora"] == hora
+    indiceBuscado=int(planilla[filtro1 & filtro2].index[0])
+    
+    if pd.isna(planilla.at[indiceBuscado,"DNI"]): #Si la celda en la col DNI esta vacia es porque el dia y horario que solicito esta desocupado
+        dniAsociado=input("El dia y hora elegido estan disponibles, por favor ingrese su DNI u escriba 'salir' para volver" "\n") #PULIR PARA CUANDO 1 PERSONA TENGA MAS DE UN TURNO EN LA MISMA SEMANA
         if dniAsociado.lower() == "salir":
-            return True #Para indicarle al metodo que invoco a este que aun continua la ejecucion de sacar un turno.
-        elif verificaDni(dniAsociado):
-            planilla.at[hora,dia]= int(dniAsociado)
-            print("Su turno fue confirmado con exito, recuerde presentarse el dia: " + dia + hora + "hs con su DNI")
-            return False
-        
-    else:
-        print("Lamentablemente no hay turno disponible para el horario que necesita, a continuacion vera los turnos disponibles correspondiente al dia " + dia)
-        horariosDiposnibles= obtieneHorariosDeUnDia(dia,planilla) #Espera una lista con los horarios disponibles en 'dia'
+            return True #Para indicarle al metodo que invocó a este que aun continua la ejecucion de sacar un turno.
         while(True):
-            horarioElegido = input(f"Horarios disponibles: {', '.join(horariosDiposnibles)}\n¿Cuál deseas elegir? U escriba 'salir' para volver atras: " "\n") #join arma una cadena con esa lista para luego mostrarla por pantalla y que la persona elija el horario que desea
+            if verificaDni(dniAsociado):            
+                return asignaTurno(dia,hora,dniAsociado,planilla,indiceBuscado)     
+            else:
+                dniAsociado= input("El DNI ingresado no tiene formato valido, por favor vuelva a ingresarlo" "\n")   
+      
+    else: #Entra a este else cuando el dia y horario elegido en un principio esta ocupado
+        print("Lamentablemente no hay turno disponible para el horario que necesita, a continuacion vera los turnos disponibles correspondiente al dia " + dia)
+        dfFiltrado= obtieneHorariosDeUnDia(dia,planilla) #Espera un DF que solo tiene Dia==dia y DNI vacio, de esta manera puedo buscar que horarios de "dia" estan libres
+        horariosDisponibles= dfFiltrado.loc[:,"Hora"]
+        while(True):
+            print(horariosDisponibles.tolist())
+            horarioElegido = input("\n¿Cuál deseas elegir? U escriba 'salir' para volver atras: " "\n")
             if horarioElegido.lower()== 'salir':
                 return True
-            if f"{horarioElegido}:00" in horariosDiposnibles:
+            if horarioElegido in horariosDisponibles.tolist():
                 while(True):
                     dniAsociado= input("Indique su DNI para terminar la confirmacion" "\n")
                     if verificaDni(dniAsociado):
-                        planilla.at[f"{horarioElegido}:00",dia]= int(dniAsociado)
-                        print("La confirmacion fue realizada con exito, recuerde presentarse el dia: " + dia + "  " + horarioElegido + "Hs con su DNI")
+                        asignaTurno(dia,horarioElegido,dniAsociado,planilla,int((horariosDisponibles[horariosDisponibles == horarioElegido]).index[0]))
                         return False
                     else:
-                        print("El DNI ingresado no tiene formato valido, por favor vuelva a ingresarlo")           
+                          print("El DNI ingresado no tiene formato valido, por favor vuelva a ingresarlo")           
             else:
                 print("El horario elegido es incorrecto ,por favor vuelva a intentarlo")
 
  
 def verificaDni(dni):
     #Verifica si el numero ingresado coincide con el formato de un DNI
-    dniLimpio = dni.strip() #strip() es como trim en java, limpia espacios
-    
+    dniLimpio = dni.strip() #strip() es como trim en java, limpia espacios    
     try:
         dni_numero = int(dniLimpio)
         if 7000000 <= dni_numero <= 99999999:
@@ -81,33 +86,95 @@ def verificaDni(dni):
     except ValueError:
         #Si fallo la conversion a INT o el numero no esta entre los digitos dados, retorno False
         return False       
+    
+def asignaTurno(dia,hora,dni,planilla,indice):
+    #Metodo encargado de asigna el turno en la planilla, previamente se hicieron las verificaciones necesarias
+    nombre= input("Por favor indique Nombre" "\n")
+    apellido= input("Por favor indique su Apellido" "\n")
+    planilla.at[indice,"DNI"]= int(dni)
+    planilla.at[indice,"Nombre_Apellido"]= nombre+ " " +apellido
+    print("El turno ha sido confirmado con exito, lo esperamos el dia: " + dia + "  " + hora + "Hs con su DNI")
+       
 
 
 def obtieneHorariosDeUnDia(dia,planilla):
     #Metodo que devuelve una lista con los horarios libres en el dia previamente elegido
-    filtro= (planilla[dia].isna()) | (planilla[dia] == "")
-    horariosLibres= planilla.index[filtro]
-    return list(horariosLibres)
-
+    filtroHorario= planilla["Dia"] == dia 
+    filtroDesocupado= planilla["DNI"].isna()   
+    indicesHorarioDesocupado= planilla[filtroHorario & filtroDesocupado]
+    return indicesHorarioDesocupado
+    
+    
+    
 def cancelarTurno(dni,planilla):
-    #Este metodo busca el/los turnos ligados al DNI, si es solo uno elimina y da la notificacion a la persona,
-    #En caso de tener mas de un turno asociado, el metodo muestra por pantalla los turnos y el usuario elige cual dar de baja
+    #Este metodo busca el/los turnos ligados al DNI, si es solo uno elimina y da la notificacion a la persona en otro caso le muestra una lista de los turnos que tiene y esta elige cual cancelar
+    filtro1= (planilla["DNI"] == dni)
+    indicesDniCoincidentes = filtro1[filtro1].index.tolist()
+    if indicesDniCoincidentes:
+        if len(indicesDniCoincidentes)>1:
+            dfDiayHorariosCoincidentes= obtieneDiasyHorario(indicesDniCoincidentes,planilla)
+            print("El Dni ingresado tiene mas de un turno asociado, a continuacion vera los turnos y debera indicar cual desea cancelar" "\n")
+            opciones= []
+            for indice,fila in dfDiayHorariosCoincidentes.iterrows():
+                dia= str(fila["Dia"]).strip()
+                hora= str(fila["Hora"]).strip()
 
-    turnosCoincidentes= planilla.where(planilla == dni) #Obtengo una nueva planilla donde las celdas que no sean coincidentes con el DNI buscado estaran con valor 'null'
-    listaTurnosCoincidentes= turnosCoincidentes.stack().dropna().index  #Paso a una lista las keys(hora,dia) de las casillas no nulas, de esta forma obtengo los turnos que estan asociados al DNI
+                print(f"{dia} a las {hora}hs")
+                opciones.append(f"{dia} {hora}")
+        
+            while(True):
+                eleccion= input("Escriba el dia y hora que desea. Ej: lunes 09:30" "\n").strip()       
+                if eleccion in opciones:
+                    #falta hacer la logica para ingresar en la planilla los cambios
+                    a=a
+                else:
+                    print("La opcion elegida no es correcta, vuelva a ingresar los datos")
+            
+        else:
+            indice=int(indicesDniCoincidentes[0])
+            planilla.at[indice, "DNI"]= pd.NA
+            planilla.at[indice,"Nombre_Apellido"]= pd.NA
+            print("El turno ha sido cancelado con exito" "\n")
+        
+    else: 
+        respuesta=input("No existen turnos asociados al Dni ingresado, vuelva a ingresar el Dni o escriba 'salir' para volver al menu principal")    
+        
+        
+def limpiaFormatoTexto(texto):
+    # 1. Pasamos todo a minúscula obligatoriamente
+    texto_limpio = str(texto).lower()
+    
+    # 2. Matamos las tildes a lo bruto
+    texto_limpio = texto_limpio.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+    
+    # 3. EL GOLPE FINAL: split() rompe por CUALQUIER tipo de espacio raro, 
+    # y join() lo pega de nuevo sin espacios en el medio.
+    texto_blindado = "".join(texto_limpio.split())
+    
+    return texto_blindado      
+    
 
+            
+
+def obtieneDiasyHorario(listaIndices,planilla):
+    #Este metodo recibe una lista de indices y devuelve un DF con los dias y horarios que corresponden a los indices
+    dfFiltrado= planilla.loc[listaIndices,["Dia", "Hora"]]
+    return dfFiltrado
+    
+        
 
 
 def main():
-    planillaTurnosOculista= pd.read_excel(r"F:\Programacion\ProyectosProgramacion\DiplomaturaUBA\ChatBot\BD\PlanillaOculista.xlsx",index_col=0)
-    planillaTurnosOdontologo= pd.read_excel(r"F:\Programacion\ProyectosProgramacion\DiplomaturaUBA\ChatBot\BD\PlanillaOdontologo.xlsx",index_col=0)
+    planillaTurnosOculista= pd.read_excel(r"ChatBot-Oculista-Odontologia\BD\PlanillaOculista.xlsx")
+    planillaTurnosOdontologo= pd.read_excel(r"ChatBot-Oculista-Odontologia\BD\PlanillaOdontologo.xlsx")
     #Convierto los datos en string para que no se rompa al comparar con la hora pasada por parametro, esto porque Pandas usa Datetime
-    planillaTurnosOdontologo.index = planillaTurnosOdontologo.index.astype(str)
-    planillaTurnosOculista.index = planillaTurnosOdontologo.index.astype(str)
+    planillaTurnosOculista["Hora"] = planillaTurnosOculista["Hora"].astype(str).str.strip().str[:5]
+    planillaTurnosOculista["Dia"] = planillaTurnosOculista["Dia"].astype(str).str.strip()
+    planillaTurnosOdontologo["Hora"] = planillaTurnosOdontologo["Hora"].astype(str).str.strip().str[:5]
+    planillaTurnosOdontologo["Dia"] = planillaTurnosOdontologo["Dia"].astype(str).str.strip()
     seguir=True
     print("Hola soy A.V.I, el asistente de SAMServices")
     while(seguir):
-        print("\n")
         print("Indique el numero correspondiente a lo que desea realizar")
         opcion=int(input("1-Solicitar turno con Odoltologo" "\n" "2-Solicitar turno con Oculista" "\n" "3-Dar de baja un turno" "\n" "4-Terminar la consulta" "\n"))
         if opcion==1:
@@ -120,7 +187,7 @@ def main():
         elif opcion==3 :
                 continua=True
                 while(continua): 
-                    respuesta=int(input("1-Cancelar turno con Oculista" "\n" "2-Cancelar turno con Odontologo" "\n" "3-Salir" "\n" "Coloque el numero que corresponde a lo que desea realizar" "\n"))
+                    respuesta=int(input("1-Cancelar turno con Odontologo" "\n" "2-Cancelar turno con Oculista" "\n" "3-Salir" "\n" "Coloque el numero que corresponde a lo que desea realizar" "\n"))
                     if respuesta in {1,2,3}:
                         if respuesta==3:
                             continua=False
@@ -133,7 +200,7 @@ def main():
                                 else: 
                                     if verificaDni(dni):
                                         dni= int(dni)
-                                        if respuesta==1:
+                                        if respuesta==2:
                                             terminar=cancelarTurno(dni,planillaTurnosOculista)
                                         else:
                                             terminar=cancelarTurno(dni,planillaTurnosOdontologo)    
